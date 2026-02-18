@@ -101,7 +101,7 @@ def create_chart(product_name):
     plt.close()
     return path
 
-def send_combined_report(changes_list):
+def send_combined_report(changes_list): # Wysyła jeden email z raportem dla wszystkich produktów, które zmieniły cenę
     msg = MIMEMultipart()
     msg['From'] = EMAIL_SENDER
     msg['To'] = ", ".join(EMAIL_RECEIVERS)
