@@ -1,0 +1,29 @@
+Program szuka zdjęć w określonym folderze (i jego podfolderach) na podstawie współrzędnych
+GPS zapisanych w metadanych EXIF.
+Znajduje zdjęcia, które zostały zrobione w określonym promieniu od podanego adresu, 
+a następnie przenosi je do nowo utworzonego folderu "wyszukane XX" wewnątrz katalogu 
+źródłowego. 
+
+Wymaga zainstalowania bibliotek: Pillow, geopy
+
+Konfiguracja:
+- Parametry programu są wczytywane z pliku JSON: szukaj_zdjec.json
+- Plik musi zawierać: folder_zrodlowy, adres, promien
+- Edytuj szukaj_zdjec.json aby zmienić ustawienia bez modyfikowania kodu
+
+{
+  "folder_zrodlowy": "C:/Users/truec/Pictures/Camera Roll",
+  "adres": "Produkcyjna 110, Białystok",
+  "promien": 1.5
+}
+
+Zawartość folderu dist:
+
+szukaj_zdjec.exe - plik wykonywalny
+szukaj_zdjec.json - plik konfiguracyjny
+Aby używać programu:
+
+Upewnij się że oba pliki (szukaj_zdjec.exe i szukaj_zdjec.json) są w tym samym katalogu
+Edytuj szukaj_zdjec.json aby zmienić ustawienia (folder źródłowy, adres, promień)
+Dwukliknij szukaj_zdjec.exe aby uruchomić program
+Program wymaga bibliotek (Pillow, geopy) zainstalowanych na komputerze, aby działać. Jeśli biblioteki nie są zainstalowane globalnie, możesz rozpowszechniać całą wirtualne środowisko razem z programem, lub użyć opcji PyInstallera do dołączenia wszystkich zależności.

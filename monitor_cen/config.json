@@ -1,0 +1,19 @@
+{
+  "email_sender": "truecapehorn@gmail.com",
+  "email_password": "ctrw hvev vced zpqw",
+  "email_receivers": [
+    "jablonski.norbert@gmail.com",
+    "tito02@o2.pl"
+  ],
+  "products": {
+    "Złoty Dukat Austriacki 3,44 g": "https://tavex.pl/zloto/austriacki-zloty-dukat/",
+    "Złota moneta Rosyjskie 5 Rubli Mikołaj II 3,87 g": "https://tavex.pl/zloto/rosyjskie-zlote-5-rubli/",
+    "Złota moneta Francuskie 20 Franków Marianna i Kogut 5,81 g": "https://tavex.pl/zloto/francuskie-20frankow-marianna/",
+    "Złota moneta Wiedeński Filharmonik 1/10 oz": "https://tavex.pl/zloto/zloty-wiedenski-filharmonik-1-10-oz/",
+    "Złota moneta Amerykański Orzeł 1/10 oz": "https://tavex.pl/zloto/zloty-amerykanski-orzel-1-10-oz/",
+    "Srebrna moneta Kanadyjski Liść Klonu 1 oz": "https://tavex.pl/srebro/srebrny-kanadyjski-lisc-klonu-1-oz/",
+    "Srebrna moneta Wiedeński Filharmonik 1 oz": "https://tavex.pl/srebro/srebrny-wiedenski-filharmonik-1-oz/",
+    "Srebrna moneta Amerykański Orzeł 1 oz": "https://tavex.pl/srebro/srebrny-amerykanski-orzel-1-oz-srebra/",
+    "Srebrna moneta Australijski Kangur 1 oz": "https://tavex.pl/srebro/srebrny-australijski-kangur-1-oz/"
+  }
+}
