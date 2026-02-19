@@ -85,7 +85,7 @@ def get_prices(url): # Pobiera ceny sprzedaży i skupu z podanego URL-a Tavexdef
 def create_chart(product_name):
     if not os.path.exists(DATA_FILE): return None
     df = pd.read_csv(DATA_FILE, encoding='utf-8')
-    product_data = df[df['product'] == product_name].tail(15)
+    product_data = df[df['product'] == product_name].tail(15) # Pobiera ostatnie 15 wpisów dla danego produktu, aby nie robić zbyt zatłoczonego wykresu
     if len(product_data) < 2: return None
 
     plt.figure(figsize=(8, 4))
@@ -96,8 +96,8 @@ def create_chart(product_name):
     plt.legend()
     plt.tight_layout()
     
-    path = f"chart_{clean_filename(product_name)}.png"
-    plt.savefig(path)
+    path = f"chart_{clean_filename(product_name)}.png" # Tworzy nazwę pliku wykresu na podstawie nazwy produktu, usuwając niedozwolone znaki
+    plt.savefig(path) 
     plt.close()
     return path
 
@@ -140,7 +140,7 @@ def send_combined_report(changes_list): # Wysyła jeden email z raportem dla wsz
             s.send_message(msg)
         print("✅ Wysłano raport zbiorczy.")
     finally:
-        for p in attachments:
+        for p in attachments: # Usuwa tymczasowe pliki wykresów po wysłaniu emaila
             if os.path.exists(p): os.remove(p)
 
 def send_weekly_summary():
@@ -175,7 +175,7 @@ def send_weekly_summary():
             max_price = p_data['sell_price'].max()
             summary_body += f"🔹 {product}:\n   Cena 7 dni temu: {start_p} PLN | Dziś: {end_p} PLN\n   Wynik: {emoji} {diff} PLN ({pct}%)\n   Min/Max: {min_price} - {max_price} PLN\n   --------------------------\n"
 
-    msg = MIMEMultipart()
+    msg = MIMEMultipart() 
     msg['From'] = EMAIL_SENDER
     msg['To'] = ", ".join(EMAIL_RECEIVERS)
     msg['Subject'] = f"📆 PODSUMOWANIE TYGODNIOWE: {datetime.now().strftime('%d.%m.%Y')}"
