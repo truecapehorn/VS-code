@@ -283,7 +283,7 @@ def monitor():
         print(f"🚨 Wykryto {len(changes_detected)} zmian. Wysyłanie raportu...")
         for c in changes_detected:
             trend = "📈 WZROST" if c['diff'] > 0 else "📉 SPADEK"
-            print(f"   {c['name']}: {trend} o {c['diff']} PLN (nowa cena: {c['new']} PLN)")
+            # print(f"   {c['name']}: {trend} o {c['diff']} PLN (nowa cena: {c['new']} PLN)")
         send_combined_report(changes_detected)
     else:
         print("✅ Brak zmian cen. Nie wysyłamy raportu.")   
