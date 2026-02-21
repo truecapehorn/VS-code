@@ -4,6 +4,7 @@ import numpy as np
 import xml.etree.ElementTree as ET
 import time
 import datetime
+import shutil
 
 # --- KONFIGURACJA ---
 BASE_DIR = r"c:\Users\truec\python_scripts\VS Code\RTL"
@@ -38,18 +39,25 @@ class ProfessionalRadioScanner:
         print(f"--- Inteligentny Skaner V4 | Lokalizacja: {BASE_DIR} ---")
         self.frequencies = self._parse_xml(xml_path)
         self.sdr = RtlSdr()
-        self.sdr.sample_rate = 2.048e6 
-        self.sdr.gain = 45.0 
+        self.sdr.sample_rate = 2.048e6 # Zwiększony do 2.048 MHz dla lepszej jakości audio
+        self.sdr.gain = 45.0 # Maksymalny gain (możesz dostosować, jeśli masz szum)
         
-        # --- KALIBRACJA (Zmień tutaj, jeśli nagrywa szum) ---
-        self.rssi_threshold = -10.0  # Widzę w logach, że masz szum ok -35dB, więc -25 będzie bezpieczne
-        self.hang_time_limit = 1.5   # Czas, przez który kontynuujemy nagrywanie po spadku sygnału poniżej progu (w sekundach)
-        self.hang_time_counter = 0   
+        # --- KALIBRACJA (Zmienione, by nie łapać szumu -35dB) ---
+        self.rssi_threshold = -20.0  # Było -25, teraz jest znacznie wyżej (bezpieczniej)
+        self.hang_time_limit = 1.0   # Skróciłam nieco czas oczekiwania
+        self.hang_time_counter = 0   # Licznik czasu zawieszenia
         
         self.audio_buffer = []
         self.is_recording = False
         self.current_title = ""
         self.current_freq_mhz = 0.0
+        self.clear_recordings()
+
+    def clear_recordings(self):
+        if os.path.exists(BASE_OUTPUT_DIR):
+            shutil.rmtree(BASE_OUTPUT_DIR)
+            os.makedirs(BASE_OUTPUT_DIR)
+            print("Wyczyszczono poprzednie nagrania.")
 
     def get_daily_folder(self):
         today = datetime.datetime.now().strftime("%Y-%m-%d")
@@ -76,28 +84,6 @@ class ProfessionalRadioScanner:
         b, a = butter(order, [low, high], btype='band')
         return lfilter(b, a, data)
 
-    def draw_ui(self, rssi, title):
-        bar_len = 30
-        # Skala od -50 do -10 dB
-        min_db, max_db = -50, -10
-        level = int((max(min(rssi, max_db), min_db) - min_db) / (max_db - min_db) * bar_len)
-        thresh_pos = int((self.rssi_threshold - min_db) / (max_db - min_db) * bar_len)
-        
-        # Rysowanie paska z progiem
-        bar = list("-" * bar_len)
-        for i in range(level): bar[i] = "█"
-        if 0 <= thresh_pos < bar_len:
-            bar[thresh_pos] = "║" # Znacznik Twojego progu (Squelch)
-            
-        bar_str = "".join(bar)
-        
-        if self.is_recording:
-            status = f" [WAIT {self.hang_time_counter:.1f}s]" if self.hang_time_counter > 0 else " [REC!]"
-        else:
-            status = " [SCAN]"
-            
-        sys.stdout.write(f"\r{title[:12]:<12} |{bar_str}| {rssi:.1f} dB{status}    ")
-        sys.stdout.flush()
 
     def save_file(self):
         if not self.audio_buffer: return
@@ -117,9 +103,36 @@ class ProfessionalRadioScanner:
         except Exception as e:
             print(f"\n[BŁĄD ZAPISU] {e}")
 
+    def draw_ui(self, rssi, title):
+        bar_len = 30
+        min_db, max_db = -70, 0  # Szersza skala dla lepszej widoczności
+        
+        # Obliczanie pozycji paska i progu
+        level = int((max(min(rssi, max_db), min_db) - min_db) / (max_db - min_db) * bar_len)
+        thresh_pos = int((self.rssi_threshold - min_db) / (max_db - min_db) * bar_len)
+        
+        bar = list("-" * bar_len)
+        for i in range(level):
+            if i < bar_len: bar[i] = "█"
+        
+        # Wstawienie znacznika progu
+        if 0 <= thresh_pos < bar_len:
+            bar[thresh_pos] = "║"
+            
+        bar_str = "".join(bar)
+        
+        if self.is_recording:
+            status = f" [WAIT {self.hang_time_counter:.1f}s]" if self.hang_time_counter > 0 else " [REC!]"
+        else:
+            status = " [SCAN]"
+            
+        sys.stdout.write(f"\r{title[:12]:<12} |{bar_str}| {rssi:.1f} dB{status}    ")
+        sys.stdout.flush()
+
     def run(self):
-        print(f"Skanowanie {len(self.frequencies)} kanałów. Próg (Squelch): {self.rssi_threshold} dB")
-        print(f"Pasek: ║ = Twój próg. Sygnał musi go minąć, by nagrywać.")
+        # --- NOWY PRÓG DLA TEJ SKALI ---
+        self.rssi_threshold = -35.0 # Ustawiamy na -35, bo szum powinien być niżej
+        print(f"Skanowanie {len(self.frequencies)} kanałów. Próg: {self.rssi_threshold} dB")
         last_time = time.time()
         
         try:
@@ -127,11 +140,21 @@ class ProfessionalRadioScanner:
                 for entry in self.frequencies:
                     f, t = entry['freq'], entry['title']
                     self.sdr.center_freq = f
-                    time.sleep(0.08)
+                    time.sleep(0.12) # Stabilizacja tunera
                     
-                    samples = self.sdr.read_samples(131072)
-                    rssi = 10 * np.log10(np.mean(np.abs(samples)**2) + 1e-12)
-                    
+                    try:
+                        samples = self.sdr.read_samples(131072)
+                        # Demodulacja do FM
+                        audio = np.diff(np.unwrap(np.angle(samples)))
+                        # Filtracja mowy
+                        filtered = self.butter_bandpass_filter(audio, fs=24000)
+                        
+                        # Obliczanie RSSI (logarytm z RMS)
+                        rms = np.sqrt(np.mean(filtered**2))
+                        rssi = 20 * np.log10(rms + 1e-12) 
+                    except:
+                        continue
+
                     self.draw_ui(rssi, t)
                     
                     now = time.time()
