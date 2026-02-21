@@ -83,7 +83,15 @@ class ProfessionalRadioScanner:
             return data
         except Exception: return []
 
+    def butter_lowpass_filter(self, data, cutoff=6000, fs=2.048e6, order=5):
+        """Filtr dolnoprzepustowy dla wydzielenia kanału NFM 12kHz"""
+        nyq = 0.5 * fs
+        normal_cutoff = cutoff / nyq
+        b, a = butter(order, normal_cutoff, btype='low')
+        return lfilter(b, a, data)
+
     def butter_bandpass_filter(self, data, lowcut=300, highcut=3000, fs=24000, order=5):
+        """Filtr pasmowy dla audio (mowa)"""
         nyq = 0.5 * fs
         low, high = lowcut / nyq, highcut / nyq
         b, a = butter(order, [low, high], btype='band')
@@ -99,12 +107,20 @@ class ProfessionalRadioScanner:
         
         try:
             samples = np.concatenate(self.audio_buffer)
-            audio = np.diff(np.unwrap(np.angle(samples))) 
-            audio = self.butter_bandpass_filter(audio, fs=24000)
+            
+            # Pełne przetwarzanie N-FM dla zapisu
+            filtered_channel = self.butter_lowpass_filter(samples, cutoff=6000, fs=self.sdr.sample_rate)
+            decimation_factor = 42
+            decimated = filtered_channel[::decimation_factor]
+            audio = np.diff(np.unwrap(np.angle(decimated)))
+            fs_audio = self.sdr.sample_rate / decimation_factor
+            audio = self.butter_bandpass_filter(audio, lowcut=300, highcut=3000, fs=fs_audio)
+            
+            # Normalizacja i eksport
             audio = (audio / np.max(np.abs(audio)) * 32767).astype(np.int16)
-            seg = AudioSegment(audio.tobytes(), frame_rate=24000, sample_width=2, channels=1)
+            seg = AudioSegment(audio.tobytes(), frame_rate=int(fs_audio), sample_width=2, channels=1)
             seg.export(full_path, format="mp3")
-            print(f"\n[ZAPISANO] {fname}")
+            print(f"\n[ZAPISANO N-FM] {fname}")
         except Exception as e:
             print(f"\n[BŁĄD ZAPISU] {e}")
 
@@ -136,8 +152,9 @@ class ProfessionalRadioScanner:
 
     def run(self):
         # --- NOWY PRÓG DLA TEJ SKALI ---
-        self.rssi_threshold = -30.0 # Wyższy próg, mniej szumów
-        print(f"Skanowanie tylko częstotliwości 144.950 MHz. Próg: {self.rssi_threshold} dB + detekcja aktywności")
+        self.rssi_threshold = -5.0 # Wyższy próg, mniej szumów
+        print(f"Skanowanie częstotliwości 144.950 MHz w trybie N-FM 12kHz")
+        print(f"Próg RSSI: {self.rssi_threshold} dB + detekcja aktywności ({self.rms_activity_delta} dB powyżej szumu)")
         last_time = time.time()
         freq = 144950000
         title = "144.950 MHz"
@@ -147,15 +164,29 @@ class ProfessionalRadioScanner:
                 time.sleep(0.12) # Stabilizacja tunera
                 try:
                     samples = self.sdr.read_samples(131072)
-                    # Demodulacja do FM
-                    audio = np.diff(np.unwrap(np.angle(samples)))
-                    # Filtracja mowy
-                    filtered = self.butter_bandpass_filter(audio, fs=24000)
-                    # Obliczanie RSSI (logarytm z RMS)
+                    
+                    # --- KROK 1: Filtracja kanału N-FM 12kHz ---
+                    # Filtr dolnoprzepustowy ~6kHz (połowa szerokości kanału NFM)
+                    filtered_channel = self.butter_lowpass_filter(samples, cutoff=6000, fs=self.sdr.sample_rate)
+                    
+                    # --- KROK 2: Decymacja próbek ---
+                    # Z 2.048 MHz do ~48 kHz (decymacja 42x)
+                    decimation_factor = 42
+                    decimated = filtered_channel[::decimation_factor]
+                    
+                    # --- KROK 3: Demodulacja FM ---
+                    audio = np.diff(np.unwrap(np.angle(decimated)))
+                    
+                    # --- KROK 4: Filtracja mowy (300-3000 Hz) ---
+                    fs_audio = self.sdr.sample_rate / decimation_factor  # ~48.8 kHz
+                    filtered = self.butter_bandpass_filter(audio, lowcut=300, highcut=3000, fs=fs_audio)
+                    
+                    # --- KROK 5: Obliczanie RSSI ---
                     rms = np.sqrt(np.mean(filtered**2))
                     rssi = 20 * np.log10(rms + 1e-12)
-                    print(f"DEBUG: freq={freq/1e6:.3f} MHz, rssi={rssi:.1f} dB")
-                except:
+                    print(f"DEBUG: freq={freq/1e6:.3f} MHz, rssi={rssi:.1f} dB [N-FM 12kHz]")
+                except Exception as e:
+                    print(f"\nBŁĄD PRZETWARZANIA: {e}")
                     continue
                 self.draw_ui(rssi, title)
                 now = time.time()
