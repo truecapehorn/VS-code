@@ -44,7 +44,7 @@ class ProfessionalRadioScanner:
         
         # --- KALIBRACJA (Zmienione, by nie łapać szumu -35dB) ---
         self.rssi_threshold = -20.0  # Było -25, teraz jest znacznie wyżej (bezpieczniej)
-        self.hang_time_limit = 1.0   # Skróciłam nieco czas oczekiwania
+        self.hang_time_limit = 3.0   # Czas oczekiwania po utracie sygnału (3s dla lepszej tolerancji)
         self.hang_time_counter = 0   # Licznik czasu zawieszenia
         
         self.audio_buffer = []
@@ -56,7 +56,7 @@ class ProfessionalRadioScanner:
         self.clear_recordings()
         self.rms_history = []
         self.rms_history_len = 40  # ok. 5 sekund przy ~8 cyklach/s
-        self.rms_activity_delta = 6.0  # dB powyżej średniej szumu
+        self.rms_activity_delta = 3.0  # dB powyżej średniej szumu (obniżone dla lepszej detekcji)
 
     def clear_recordings(self):
         if os.path.exists(BASE_OUTPUT_DIR):
@@ -152,7 +152,7 @@ class ProfessionalRadioScanner:
 
     def run(self):
         # --- NOWY PRÓG DLA TEJ SKALI ---
-        self.rssi_threshold = -5.0 # Wyższy próg, mniej szumów
+        self.rssi_threshold = -20.0 # Wyższy próg, mniej szumów
         print(f"Skanowanie częstotliwości 144.950 MHz w trybie N-FM 12kHz")
         print(f"Próg RSSI: {self.rssi_threshold} dB + detekcja aktywności ({self.rms_activity_delta} dB powyżej szumu)")
         last_time = time.time()
