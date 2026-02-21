@@ -51,7 +51,12 @@ class ProfessionalRadioScanner:
         self.is_recording = False
         self.current_title = ""
         self.current_freq_mhz = 0.0
+        self.recording_time_counter = 0.0  # Licznik czasu nagrania
+        self.max_recording_time = 10.0     # Maksymalna długość nagrania w sekundach
         self.clear_recordings()
+        self.rms_history = []
+        self.rms_history_len = 40  # ok. 5 sekund przy ~8 cyklach/s
+        self.rms_activity_delta = 6.0  # dB powyżej średniej szumu
 
     def clear_recordings(self):
         if os.path.exists(BASE_OUTPUT_DIR):
@@ -131,43 +136,52 @@ class ProfessionalRadioScanner:
 
     def run(self):
         # --- NOWY PRÓG DLA TEJ SKALI ---
-        self.rssi_threshold = -35.0 # Ustawiamy na -35, bo szum powinien być niżej
-        print(f"Skanowanie {len(self.frequencies)} kanałów. Próg: {self.rssi_threshold} dB")
+        self.rssi_threshold = -30.0 # Wyższy próg, mniej szumów
+        print(f"Skanowanie tylko częstotliwości 144.950 MHz. Próg: {self.rssi_threshold} dB + detekcja aktywności")
         last_time = time.time()
-        
+        freq = 144950000
+        title = "144.950 MHz"
         try:
             while True:
-                for entry in self.frequencies:
-                    f, t = entry['freq'], entry['title']
-                    self.sdr.center_freq = f
-                    time.sleep(0.12) # Stabilizacja tunera
-                    
-                    try:
-                        samples = self.sdr.read_samples(131072)
-                        # Demodulacja do FM
-                        audio = np.diff(np.unwrap(np.angle(samples)))
-                        # Filtracja mowy
-                        filtered = self.butter_bandpass_filter(audio, fs=24000)
-                        
-                        # Obliczanie RSSI (logarytm z RMS)
-                        rms = np.sqrt(np.mean(filtered**2))
-                        rssi = 20 * np.log10(rms + 1e-12) 
-                    except:
-                        continue
-
-                    self.draw_ui(rssi, t)
-                    
-                    now = time.time()
-                    dt = now - last_time
-                    last_time = now
-
-                    if rssi > self.rssi_threshold:
-                        if not self.is_recording:
-                            self.current_title, self.current_freq_mhz = t, f / 1e6
-                        self.is_recording = True
-                        self.hang_time_counter = self.hang_time_limit
-                        self.audio_buffer.append(samples)
-                    else:
+                self.sdr.center_freq = freq
+                time.sleep(0.12) # Stabilizacja tunera
+                try:
+                    samples = self.sdr.read_samples(131072)
+                    # Demodulacja do FM
+                    audio = np.diff(np.unwrap(np.angle(samples)))
+                    # Filtracja mowy
+                    filtered = self.butter_bandpass_filter(audio, fs=24000)
+                    # Obliczanie RSSI (logarytm z RMS)
+                    rms = np.sqrt(np.mean(filtered**2))
+                    rssi = 20 * np.log10(rms + 1e-12)
+                    print(f"DEBUG: freq={freq/1e6:.3f} MHz, rssi={rssi:.1f} dB")
+                except:
+                    continue
+                self.draw_ui(rssi, title)
+                now = time.time()
+                dt = now - last_time
+                last_time = now
+                # --- Detekcja aktywności na podstawie RMS względem tła ---
+                self.rms_history.append(rssi)
+                if len(self.rms_history) > self.rms_history_len:
+                    self.rms_history.pop(0)
+                rms_avg = np.mean(self.rms_history) if self.rms_history else rssi
+                is_active = (rssi > self.rssi_threshold) and (rssi > rms_avg + self.rms_activity_delta)
+                if is_active:
+                    if not self.is_recording:
+                        self.current_title, self.current_freq_mhz = title, freq / 1e6
+                        print(f"\n[START NAGRYWANIA] {self.current_title} {self.current_freq_mhz:.3f} MHz")
+                        self.recording_time_counter = 0.0
+                    self.is_recording = True
+                    self.hang_time_counter = self.hang_time_limit
+                    self.audio_buffer.append(samples)
+                    self.recording_time_counter += dt
+                    if self.recording_time_counter >= self.max_recording_time:
+                        print(f"\n[ZAPIS AUTOMATYCZNY - LIMIT 10s]")
+                        self.save_file()
+                        self.audio_buffer, self.is_recording = [], False
+                        self.recording_time_counter = 0.0
+                else:
                         if self.is_recording:
                             self.hang_time_counter -= dt
                             self.audio_buffer.append(samples)
