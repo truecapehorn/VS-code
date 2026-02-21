@@ -43,7 +43,7 @@ class ProfessionalRadioScanner:
         
         # --- KALIBRACJA (Zmień tutaj, jeśli nagrywa szum) ---
         self.rssi_threshold = -10.0  # Widzę w logach, że masz szum ok -35dB, więc -25 będzie bezpieczne
-        self.hang_time_limit = 1.5   
+        self.hang_time_limit = 1.5   # Czas, przez który kontynuujemy nagrywanie po spadku sygnału poniżej progu (w sekundach)
         self.hang_time_counter = 0   
         
         self.audio_buffer = []
