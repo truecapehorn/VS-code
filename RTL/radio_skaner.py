@@ -3,7 +3,7 @@ import sys
 
 # --- KROK 1: KONFIGURACJA ŚCIEŻEK (MUSI BYĆ NA POCZĄTKU) ---
 # Upewnij się, że ten folder zawiera Twoje pliki .dll i ffmpeg.exe
-BASE_DIR = r"c:\Users\truec\python_scripts\VS Code\szukaj_zdjec_gps\RTL"
+BASE_DIR = r"c:\Users\truec\python_scripts\VS Code\RTL"
 LIB_DIR = os.path.join(BASE_DIR, "lib")
 XML_FILE = os.path.join(BASE_DIR, "SDR-QuickMemory_001.xml")
 OUTPUT_DIR = os.path.join(BASE_DIR, "nagrania")
