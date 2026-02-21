@@ -54,7 +54,7 @@ class AdvancedRadioScanner:
         self.sdr.gain = 45.0 
         
         # Próg RSSI - zmień jeśli nagrywa ciszę
-        self.rssi_threshold = -18.0 
+        self.rssi_threshold = -14.0 # dB, im wyższy tym mniej nagrywa, ale może przegapić słabsze sygnały
         self.audio_buffer = []
         self.is_recording = False
         self.current_title = ""
