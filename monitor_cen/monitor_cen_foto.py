@@ -43,7 +43,7 @@ except json.JSONDecodeError as e:
 
 EMAIL_SENDER    = CONFIG.get("email_sender")
 EMAIL_PASSWORD  = CONFIG.get("email_password")
-EMAIL_RECEIVERS = CONFIG.get("email_receivers", [])
+EMAIL_RECEIVERS = CONFIG.get("email_receivers_foto", CONFIG.get("email_receivers", []))
 PRODUCTS        = CONFIG.get("products_foto", {})
 
 if not EMAIL_SENDER or not EMAIL_PASSWORD:
@@ -55,7 +55,7 @@ if not PRODUCTS:
     exit(1)
 
 if not EMAIL_RECEIVERS:
-    print("❌ Błąd: Brak odbiorców email w config.json")
+    print("❌ Błąd: Brak odbiorców email (email_receivers_foto) w config.json")
     exit(1)
 
 DATA_FILE = "price_history_foto.csv"
