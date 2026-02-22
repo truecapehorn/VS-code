@@ -48,7 +48,7 @@ except json.JSONDecodeError as e:
 EMAIL_SENDER = CONFIG.get("email_sender")
 EMAIL_PASSWORD = CONFIG.get("email_password")
 EMAIL_RECEIVERS = CONFIG.get("email_receivers", [])
-PRODUCTS = CONFIG.get("products", {})
+PRODUCTS = CONFIG.get("products_inwest", {})
 
 if not EMAIL_SENDER or not EMAIL_PASSWORD:
     print("❌ Błąd: email_sender lub email_password nie ustawione w config.json")
