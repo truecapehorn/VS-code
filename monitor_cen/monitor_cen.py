@@ -2,7 +2,8 @@
 """
 Monitor cen metali szlachetnych - Tavex
 Autor: Ty (z małą pomocą AI)
-Kopiowanie na Raspberry: scp monitor_cen.py config.json pi@192.168.1.101:/home/pi/python_scripts/
+Kopiowanie na Raspberry: 
+scp monitor_cen.py monitor_cen_foto.py config.json pi@192.168.1.101:/home/pi/python_scripts/
 """
 
 import requests

@@ -5,6 +5,9 @@ Monitor cen obiektywów Fuji X - Fotoforma.pl
 Wykrywa zmiany cen oraz zmiany dostępności (np. pojawienie się na stanie).
 
 Konfiguracja w pliku config.json (klucz 'products_foto').
+Kopiowanie na Raspberry: 
+scp monitor_cen.py monitor_cen_foto.py config.json pi@192.168.1.101:/home/pi/python_scripts/
+
 """
 
 import requests
@@ -420,13 +423,13 @@ def monitor():
     else:
         print("✅ Brak zmian cen ani dostępności. Email nie jest wysyłany.")
 
-    # Raport tygodniowy – każdy poniedziałek o 7:00
-    if now_dt.weekday() == 0 and 7 <= now_dt.hour < 8:
+    # Raport tygodniowy – każdy poniedziałek o 10:00
+    if now_dt.weekday() == 0 and 10 <= now_dt.hour < 11:
         print("\n📆 Generowanie raportu tygodniowego...")
         send_weekly_summary()
 
-    # Raport miesięczny – 1. dzień miesiąca o 7:00
-    if now_dt.day == 1 and 7 <= now_dt.hour < 8:
+    # Raport miesięczny – 1. dzień miesiąca o 10:00
+    if now_dt.day == 1 and 10 <= now_dt.hour < 11:
         print("\n📅 Generowanie raportu miesięcznego...")
         send_monthly_summary()
 
