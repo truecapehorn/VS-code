@@ -1,4 +1,5 @@
 config.json
 price_history_spread.csv
+price_history_foto.csv
 *.pyc
 *.mp3
