@@ -42,11 +42,11 @@ Program wymaga pliku konfiguracyjnego `config.json` w tym samym katalogu:
 {
   "email_sender": "twoj_email@gmail.com",
   "email_password": "twoje_haslo_aplikacji_gmail",
-  "email_receivers": [
+  "email_receivers_inwest": [
     "odbiorca1@example.com",
     "odbiorca2@example.com"
   ],
-  "products": {
+  "products_inwest": {
     "Złoty Dukat Austriacki 3,44 g": "https://tavex.pl/zloto/austriacki-zloty-dukat/",
     "Srebrna moneta Kanadyjski Liść Klonu 1 oz": "https://tavex.pl/srebro/srebrny-kanadyjski-lisc-klonu-1-oz/"
   }
@@ -59,8 +59,11 @@ Program wymaga pliku konfiguracyjnego `config.json` w tym samym katalogu:
 |------|------|
 | `email_sender` | Email nadawcy (konto Gmail) |
 | `email_password` | Hasło aplikacji Gmail |
-| `email_receivers` | Lista emaili odbiorców alertów |
-| `products` | Słownik: `"Nazwa produktu": "URL do produktu na Tavex.pl"` |
+| `email_receivers_inwest` | Lista emaili odbiorców alertów dla metali szlachetnych |
+| `products_inwest` | Słownik: `"Nazwa produktu": "URL do produktu na Tavex.pl"` |
+
+> **Uwaga:** Klucz `email_receivers_inwest` jest dedykowany tylko dla tego programu.
+> Możesz tu wpisać innych odbiorców niż dla monitora obiektywów (`email_receivers_foto`).
 
 ### 2. Ustawienie Hasła Aplikacji Gmail
 
@@ -258,7 +261,7 @@ curl -I "https://tavex.pl/zloto/austriacki-zloty-dukat/"
 
 **Sprawdź:**
 1. Czy email_sender i email_password są poprawne w config.json
-2. Czy email_receivers jest niepusty
+2. Czy `email_receivers_inwest` jest niepusty
 3. Czy istnieje połączenie internetowe
 4. Sprawdź logi (dodaj `print()` w kodzie lub sprawdź output programu)
 

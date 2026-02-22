@@ -26,7 +26,7 @@ Wymagane klucze:
 {
   "email_sender": "twoj_email@gmail.com",
   "email_password": "haslo_aplikacji_gmail",
-  "email_receivers": [
+  "email_receivers_foto": [
     "odbiorca1@gmail.com",
     "odbiorca2@o2.pl"
   ],
@@ -40,6 +40,9 @@ Wymagane klucze:
 
 > **Hasło Gmail** — użyj [hasła do aplikacji](https://myaccount.google.com/apppasswords),
 > nie zwykłego hasła do konta (wymaga włączonej weryfikacji dwuetapowej).
+
+> **Uwaga:** Klucz `email_receivers_foto` jest dedykowany tylko dla tego programu.
+> Możesz tu wpisać innych odbiorców niż dla monitora metali szlachetnych (`email_receivers_inwest`).
 
 ### Dodawanie nowych obiektywów
 
