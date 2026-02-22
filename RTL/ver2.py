@@ -1,3 +1,4 @@
+import noisereduce as nr
 import os
 import time
 import wave
@@ -7,6 +8,7 @@ import sys
 
 import numpy as np
 from scipy.signal import butter, lfilter, resample_poly
+import scipy.signal
 try:
     import sounddevice as sd
 except ImportError:
@@ -53,7 +55,7 @@ PREBUFFER_SEC = 0.8
 HANGOVER_SEC = 1.2
 START_VOICE_SEC = 0.12
 MAX_TX_SEC = 180
-SIGNAL_MARGIN_DB = 7.0
+SIGNAL_MARGIN_DB = 12.0
 LIVE_MONITOR = True
 MONITOR_GAIN = 1.2
 
@@ -80,11 +82,13 @@ class NfmVoiceRecorder:
         self.recording = False
         self.record_frames = []
         self.voice_streak = 0
+        self.prev_frame_db = self.noise_floor_db
         self.silence_streak = 0
         self.frames_in_tx = 0
 
         self.start_frames = max(1, int(START_VOICE_SEC * 1000 / FRAME_MS))
-        self.hang_frames = max(1, int(HANGOVER_SEC * 1000 / FRAME_MS))
+        # Szybka detekcja końca transmisji: 2 ramki ciszy (40 ms)
+        self.hang_frames = 2
         self.max_tx_frames = max(1, int(MAX_TX_SEC * 1000 / FRAME_MS))
         self.monitor_stream = None
         self.monitor_enabled = False
@@ -151,10 +155,18 @@ class NfmVoiceRecorder:
         fm = self._deemphasis(fm, AUDIO_SAMPLE_RATE)
         fm = self._bandpass(fm, low_hz=250, high_hz=3400, fs_hz=AUDIO_SAMPLE_RATE, order=4)
 
-        peak = np.max(np.abs(fm)) if fm.size else 0.0
+        # Redukcja szumów: szacuj szum na początku sygnału (pierwsze 0.5 sekundy)
+        noise_len = int(AUDIO_SAMPLE_RATE * 0.5)
+        noise_clip = fm[:noise_len] if fm.size > noise_len else fm
+        fm_denoised = nr.reduce_noise(y=fm, y_noise=noise_clip, sr=AUDIO_SAMPLE_RATE, prop_decrease=1.0)
+
+        # Filtr medianowy (ogranicza trzaski impulsowe)
+        fm_denoised = scipy.signal.medfilt(fm_denoised, kernel_size=5)
+
+        peak = np.max(np.abs(fm_denoised)) if fm_denoised.size else 0.0
         if peak > 1e-9:
-            fm = 0.9 * fm / peak
-        return fm.astype(np.float32)
+            fm_denoised = 0.9 * fm_denoised / peak
+        return fm_denoised.astype(np.float32)
 
     @staticmethod
     def _rms_db(frame_float):
@@ -202,6 +214,7 @@ class NfmVoiceRecorder:
 
     def _handle_frame(self, frame_float):
         is_voice, frame_i16, frame_db = self._is_voice(frame_float)
+        db_jump = frame_db - self.prev_frame_db
         if self.monitor_enabled and self.monitor_stream is not None:
             out = np.clip(frame_i16.astype(np.float32) * MONITOR_GAIN, -32768, 32767).astype(np.int16)
             try:
@@ -219,6 +232,7 @@ class NfmVoiceRecorder:
             else:
                 self.silence_streak += 1
 
+            # Zatrzymaj nagrywanie natychmiast po 2 ramkach ciszy
             if self.silence_streak >= self.hang_frames or self.frames_in_tx >= self.max_tx_frames:
                 self._save_tx()
                 self.recording = False
@@ -227,7 +241,9 @@ class NfmVoiceRecorder:
                 self.silence_streak = 0
 
         else:
-            if is_voice:
+            # Adaptacyjny start: wykryj nagły wzrost poziomu dB (np. > 4 dB względem poprzedniej ramki)
+            # oraz VAD wykrywa głos
+            if is_voice and db_jump > 4.0:
                 self.voice_streak += 1
             else:
                 self.voice_streak = max(0, self.voice_streak - 1)
@@ -239,6 +255,8 @@ class NfmVoiceRecorder:
                 self.silence_streak = 0
                 self.voice_streak = 0
                 print(f"\n[START] Voice @ 144.950 MHz | poziom {frame_db:.1f} dB")
+
+        self.prev_frame_db = frame_db
 
         status = "REC" if self.recording else "SCAN"
         print(
